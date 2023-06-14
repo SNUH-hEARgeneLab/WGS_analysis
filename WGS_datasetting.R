@@ -9,7 +9,7 @@ library(plotly)
 library(tidyr)
 
 
-#엑셀 원본 불러오기(처음에만 쓰고 최대한 사용 덜하기)
+#원본 데이터 처음에만 쓰고 최대한 사용 덜하기
 original_data=read_excel("C:\\Users\\SNUH\\Desktop\\WGS_project\\★★★WGS연구_유전 및 표현형 정리_v5.3.xlsx",sheet=1)
 
 ####유전자 리스트####

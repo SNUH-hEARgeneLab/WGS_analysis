@@ -9,11 +9,11 @@ library(plotly)
 library(tidyr)
 
 
-#원본 데이터 처음에만 쓰고 최대한 사용 덜하기
+#Data (Format update later)
 original_data=read_excel("C:\\Users\\SNUH\\Desktop\\WGS_project\\★★★WGS연구_유전 및 표현형 정리_v5.3.xlsx",sheet=1)
 
-####유전자 리스트####
-#제외 명단
+####Gene list####
+#Except list
 except <- c('negative','pending','CND','cCMV','B)CND','L)CND')
 
 #유전자 리스트 생성
@@ -21,12 +21,13 @@ gene_list <- unique(na.omit(original_data[,15]))
 gene_list <- as.data.frame(gene_list %>% filter(!진단유전자 %in% except))
 gene_list <- gene_list[,1]
 
-#ploting을 위한 데이터 추출(위에서 지정한 유전자들로만 구성)
+#Data setting(for plotting)
 data <- original_data[,c(15,27,7:14,29,30,33:40,31,32,41,42,43)] #원본 엑셀의 column이 변하지 않는이상 불변
 data <- as.data.frame(data %>% filter(진단유전자 %in% gene_list))
 
-#####1.mutation 분류 및 count####
-#mutation을 이어붙인 dataset 생성
+#####1.mutation classification & count####
+#counting by mutation(homo = count2)
+#mutation binding data  
 data_mut1 <- data[,c(1,3,4,5)]
 names(data_mut1) <- c('진단유전자','variant','variant_type_nt','variant_type_aa')
 data_mut2 <- data[,c(1,6,7,8)]
@@ -59,9 +60,8 @@ variant_type <- variant_type %>%
   relocate(c(variant),.after='진단유전자')
 rownames(variant_type)=NULL
 rm(data_mut2)
-#variant_type 데이터가 가장 잘 정리된 데이터(WGS유전자정보정리-가계제외)
 
-#variant count 가계별
+#counting by patient(homo=1)
 data_mut1 <- data[,c(1,2,3,4,5)]
 names(data_mut1) <- c('진단유전자','병록번호','variant','variant_type_nt','variant_type_aa')
 data_mut2 <- data[,c(1,2,6,7,8)]
@@ -88,11 +88,12 @@ names(variant_type2) <- c("진단유전자","variant","count","variant_type_nt",
 variant_type2$진단유전자 <- factor(variant_type2$진단유전자,levels=variant_rank_list)
 variant_type2 <- variant_type2[order(variant_type2$진단유전자),]
 rownames(variant_type2)=NULL
-#row수가 179가 나와야함
+
+#delete "deletion"
 variant_type2 <- variant_type2[-c(18,19,26,27,67,68),]
 rownames(variant_type2)=NULL
 
-####2.가계 Count & SNV Mutation Count####
+####2.Famliy(Patient) Count & SNV Mutation Count####
 familycount <- data %>% 
   group_by(`진단유전자`) %>% 
   summarize(v1=n())
@@ -111,16 +112,14 @@ mutation_count$V2 <- as.numeric(mutation_count$V2)
 SNVcount <- mutation_count %>% 
   group_by(`V1`) %>% 
   summarize(v1=sum(`V2`))
-#리스트 보고 수작업
-SNVcount
-SNVcount<- SNVcount[c(1:3,5:13),]
-rm(mutation_count)
 
-#=====유전자 정보 정리 excel file follow up clear=====#
-######oncoPrint data setting#####
+#Filtering SNV
+SNV <- c("A>C","A>G","A>T","C>A","C>G","C>T","G>A","G>C","G>T","T>A","T>C","T>G")
+SNVcount <- as.data.frame(SNVcount %>% filter(V1 %in% SNV))
+rm(mutation_count,SNV)
 
-#oncodata <- data[,-c(3,6)]
-#varianttype 변경 및 통합
+######Raregrid(oncoplot) data setting#####
+#varianttype change
 onco1 <- data[,c(1,2,4,5,7,8)]
 
 onco1[is.na(onco1)] <- '.'
@@ -149,10 +148,10 @@ onco1$varianttype <- gsub(".","",onco1$varianttype,fixed = TRUE)
 onco2 <- data[,9:25]
 onco_fin <- cbind(onco1,onco2)
 rm(onco1,onco2)
-#initial audio제거
+#delete "initial audio" column
 onco_fin <- subset(onco_fin,select=-`initial audio`)
 
-#나이 수정(M으로 표기된)
+#Age change(Month->Year)
 onco_fin$나이<- gsub("M","000",onco_fin$나이)
 onco_fin$나이<- as.numeric(onco_fin$나이)
 
@@ -188,13 +187,11 @@ for(i in 1:nrow(onco_fin)){
   }
 }
 
-
 onco_fin$진단유전자 <- factor(onco_fin$진단유전자,levels=family_rank_list)
 onco_fin <- onco_fin[order(onco_fin$진단유전자),]
-#onco_fin <- onco_fin[order(onco_fin$진단유전자),]
 rownames(onco_fin)=NULL
-#=====onco기본 데이터 세팅 clear=====#
-#####!!!oncoPrint ver2-final!!!#####
+
+#####Raregrid data setting#####
 oncoprintdata2 <- onco_fin[,c(1,2,3,7:18,19)]
 
 oncoprintdata2[is.na(oncoprintdata2)] <- ""

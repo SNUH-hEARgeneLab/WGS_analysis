@@ -244,7 +244,7 @@ for(i in 1:nrow(oncoprintdata2)){
   }
 }
 
-#Asymmetric과 Mixed는 제외하고 이후 진행
+#Except Asymmetric, Mixed
 #Severity
 for(i in 1:nrow(oncoprintdata2)){
   if(oncoprintdata2$Mixed[i]!="Mixed" && oncoprintdata2$Asymmetric[i]!="Asymmetric"){
@@ -316,7 +316,7 @@ for(i in 1:nrow(oncoprintdata2)){
   }
 }
 
-#가계3개까지 자르기
+#Family count>=3
 oncoprintdata3 <- oncoprintdata2[1:163,]
 oncoprintdata3 <- oncoprintdata3[,-16]
 
@@ -331,7 +331,7 @@ names(data4) <- data4[1,]
 data4 <- data4[-1,]
 rownames(data4) <- "Variant_Type"
 
-#variant type으로 각각을 표시해주기
+#Display with variant type
 for(i in 2:13){
   for(j in 1:ncol(data3)){
     if(data3[i,j]!=""){
@@ -429,7 +429,6 @@ oncoprintdata <- subset(oncoprintdata,select=-`80678315.1`)
 
 data2 <- as.matrix(oncoprintdata)
 
-#유전자 ranker순
 col = c("Missense" = "red", "Frameshift" = "orange","Nonsense"="yellow","Inframe_del/dup"="green","Splicing"="blue","SV"="purple","mtRNA"="black",
         "Missense*" = "red", "Frameshift*" = "orange","Nonsense*"="yellow","Inframe_del/dup*"="green","Splicing*"="blue","SV*"="purple","mtRNA*"="black")
 col_ord=colnames(data2)
@@ -478,12 +477,11 @@ dev.new()
 draw(lgd)
 
 #oncoplot_sub
-##한방에 그리기##
 oncosubdata <- oncoprintdata2[,c(2,1,17:30)]
 oncosubdata <- as.data.frame(t(oncosubdata))
 names(oncosubdata) <- oncosubdata[1,]
 oncosubdata <- oncosubdata[-1,]
-#double primary 제거
+#double primary delete
 oncosubdata <- oncosubdata[,-c(166,154)]
 
 oncosubdata2 <- oncoprintdata2[,2:3]
@@ -493,7 +491,7 @@ oncosubdata2 <- oncosubdata2[-1,]
 rownames(oncosubdata2) <- "Variant_Type"
 oncosubdata2 <- oncosubdata2[,-c(166,154)]
 
-#variant type으로 각각을 표시해주기
+#Display with variant type
 for(i in 2:13){
   for(j in 1:ncol(oncosubdata)){
     if(oncosubdata[i,j]!=""){
@@ -552,7 +550,7 @@ figuredata <- figuredata[!is.na(figuredata$진단유전자),]
 figuredata[is.na(figuredata)] <- ""
 rownames(figuredata)=NULL
 
-#figure B를 위한 데이터셋
+#Dataset for figure B
 figb <- figuredata[figuredata$syndromic_1==2,]
 figb <- figuredata[figuredata$syndromic_2==2,]
 
@@ -588,7 +586,7 @@ ggplot(figbcount)+
 
 rm(figb,figbcount)
 
-#figure(c)를 위한 데이터셋
+#Dataset for figure(c)
 figc <- figuredata[figuredata$`hearing loss type, Lt`==2|figuredata$`hearing loss type, Rt`==2,]
 rownames(figc)=NULL
 
@@ -608,7 +606,7 @@ figccount[1,3] <- figccount[1,2]
 figccount[1,2] <- total2
 names(figccount) <- c('진단유전자','count','total')
 figccount <- figccount[order(figccount$count,figccount$total,decreasing = T),]
-#KCNQ4,CRB1제외
+#delete KCNQ4,CRB1
 rownames(figccount)=NULL
 figccount <- figccount[-c(9,11),]
 figccount
@@ -629,7 +627,7 @@ ggplot(test)+
 
 rm(figc,figccount)
 
-#figure(d)를 위한 데이터셋
+#Dataset for figure(d)
 figd1 <- figuredata[figuredata$asymmetry==1|figuredata$asymmetry==2,]
 rownames(figd1 )=NULL
 
@@ -664,7 +662,7 @@ ggplot(test)+
 
 rm(figd1,figd1count)
 
-#figure(e,f)를 위한 데이터셋
+#Dataset for figure(e,f)
 figeef <- figuredata[figuredata$`hearing loss type, Lt`!=2 & figuredata$`hearing loss type, Rt`!=2,]
 figeef <- figeef[figeef$asymmetry==3,]
 rownames(figeef)=NULL
@@ -1038,9 +1036,7 @@ plot_ly(gr2count,labels=~진단유전자,values=~count,textinfo='label+value+per
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),showlegend=FALSE)
 
 
-
-
-#####classification 적용(supp plot)(2개 이상인 환자들 나누기)#####
+#####classification(supp plot)#####
 a <- oncoprintdata2[c(138:141,152:160),]
 a$`functional classification` <- c(7,7,7,7,4,4,4,2,2,2,7,7,7)
 oncoprintdata2 <- rbind(oncoprintdata2,a)
@@ -1284,7 +1280,6 @@ dev.new()
 draw(lgd)
 
 #####Fig2 Bar&Pie#####
-#예전A
 diagno <- as.data.frame(data$진단유전자)
 diagno1 <- as.data.frame(original_data %>% filter(진단유전자 %in% gene_list))
 diagno2 <- as.data.frame(original_data %>% filter(진단유전자 %in% except))
@@ -1375,7 +1370,7 @@ draw(lgd1)
 #B
 variant_type[is.na(variant_type)] <- ""
 
-#sum(count) or n() 으로 바꿔주면 됨/ n()은 MF3, sum은 Supp
+#sum(count) or n() / n() = MF3, sum = Supp
 data_vr1 <- variant_type %>% 
   group_by(`variant_type_nt`) %>% 
   summarize(v1=n())
@@ -1411,8 +1406,7 @@ lgd1=Legend(labels=c("Missense","Frameshift","Nonsense","Inframe del/dup","Splic
 dev.new()
 draw(lgd1)
 
-#width=450 이후 자르기
-#SNVcount(최종본에 사용 X)
+#SNVcount
 names(SNVcount) <- c('Mutation','Count')
 
 plot_ly(SNVcount,labels=~Mutation,values=~Count,textposition='none',
@@ -1444,7 +1438,7 @@ lgd1=Legend(labels=c("Autosomal Recessive","Autosomal Dominant","De Novo ","X-Li
 dev.new()
 draw(lgd1)
 
-######progressive(잠시)########
+######progressive########
 a <- oncoprintdata2[,c(1,13)]
 
 for(i in 1:nrow(a)){
@@ -1683,7 +1677,6 @@ names(data4) <- data4[1,]
 data4 <- data4[-1,]
 rownames(data4) <- "Variant_Type"
 
-#variant type으로 각각을 표시해주기
 for(i in 2:13){
   for(j in 1:ncol(data3)){
     if(data3[i,j]!=""){
@@ -1761,27 +1754,4 @@ lgd=Legend(labels=c("Missense", "Frameshift","Nonsense","Inframe_del/dup","Splic
                                  "sienna4","#A8dddd","#A8bbbb")),nrow=1)
 dev.new()
 draw(lgd)
-#####잡다 카운트######
-step[step$step1==1 & step$step2==0 & step$step3==0 & step$step4==0,] %>%   
-  group_by(`진단유전자`) %>% 
-  summarize(v1=n())
-
-x <- step[step$step1==1 & step$step2==1 & step$step3==0 & step$step4==0,] %>% 
-  group_by(`진단유전자`) %>%
-  summarize(v1=n())
-
-step[step$step1==0 & step$step2==1 & step$step3==0 & step$step4==0,] %>% 
-  group_by(`진단유전자`) %>%
-  summarize(v1=n())
-
-step[step$step1==1 & step$step2==1 & step$step3==1 & step$step4==0,] %>% 
-  group_by(`진단유전자`) %>%
-  summarize(v1=n())
-
-step[step$step4==1,]%>%
-  group_by(`진단유전자`) %>%
-  summarize(v1=n())
-
-count(step[step$step4==1,])
-
 

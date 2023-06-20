@@ -1695,10 +1695,7 @@ row_ord <- rownames(data3)
 
 col=c("Missense" = "red", "Frameshift" = "orange","Nonsense"="yellow","Inframe_del/dup"="green","Splicing"="blue","SV"="purple","mtRNA"="black",
       "Missense*" = "red", "Frameshift*" = "orange","Nonsense*"="yellow","Inframe_del/dup*"="green","Splicing*"="blue","SV*"="purple","mtRNA*"="black",
-      "GJB2"="lightgoldenrod2","SLC26A4"="lightcyan3","STRC"="lavenderblush2","USH2A"="seagreen4","CDH23"="violetred3","MPZL2"="thistle4",
-      "OTOA"="lightyellow","MYO15A"="#63666A","EYA1"="#FFE900","SIX1"="#2AD2C9","WFS1"="#9063CD","ACTG1"="#FCAEBB",
-      "COL4A3"="#74D1Ea","LMX1A"="#EA6811","TECTA"="#DDA46F","COL11A1"="#69B3E7","COL1A1"="#E0457B","KCNQ4"="#7C3A2D",
-      "MT-TL1"="black","MYO6"="#E4002B","POU4F3"="#0057B8","TMPRSS3"="#ABD156","Sustan"="sienna4","Mild"="#A8dddd","None"="#A8bbbb")
+      "Sustan"="sienna4","Mild"="#A8dddd","None"="#A8bbbb")
 
 oncoPrint(data3,
           alter_fun = list(
@@ -1720,28 +1717,6 @@ oncoPrint(data3,
             "SV*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["SV*"], col = NA)),
             "Splicing*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Splicing*"], col = NA)),
             "mtRNA*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["mtRNA"], col = NA)),
-            "GJB2" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["GJB2"], col = NA)),
-            "SLC26A4" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SLC26A4"], col = NA)),
-            "STRC" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["STRC"], col = NA)),
-            "USH2A" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["USH2A"], col = NA)),
-            "CDH23" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["CDH23"], col = NA)),
-            "MPZL2" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MPZL2"], col = NA)),
-            "OTOA" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["OTOA"], col = NA)),
-            "MYO15A" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MYO15A"], col = NA)),
-            "EYA1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["EYA1"], col = NA)),
-            "SIX1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SIX1"], col = NA)),
-            "WFS1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["WFS1"], col = NA)),
-            "ACTG1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["ACTG1"], col = NA)),
-            "COL4A3" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["COL4A3"], col = NA)),
-            "LMX1A" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["LMX1A"], col = NA)),
-            "TECTA" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["TECTA"], col = NA)),
-            "COL11A1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["COL11A1"], col = NA)),
-            "COL1A1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["COL1A1"], col = NA)),
-            "KCNQ4" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["KCNQ4"], col = NA)),
-            "MT-TL1" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MT-TL1"], col = NA)),
-            "MYO6" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MYO6"], col = NA)),
-            "POU4F3" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["POU4F3"], col = NA)),
-            "TMPRSS3" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["TMPRSS3"], col = NA)),
             "Sustan" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Sustan"], col = NA)),
             "Mild" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Mild"], col = NA)),
             "None" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["None"], col = NA))
@@ -1754,4 +1729,3 @@ lgd=Legend(labels=c("Missense", "Frameshift","Nonsense","Inframe_del/dup","Splic
                                  "sienna4","#A8dddd","#A8bbbb")),nrow=1)
 dev.new()
 draw(lgd)
-

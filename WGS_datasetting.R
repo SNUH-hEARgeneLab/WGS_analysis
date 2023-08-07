@@ -1,3 +1,5 @@
+rm(list=ls())
+
 library(readxl)
 library(dplyr)
 library(stringr)
@@ -8,15 +10,14 @@ library(colorspace)
 library(plotly)
 library(tidyr)
 
-
 #Data (Format update later)
-original_data=read_excel("C:\\Users\\SNUH\\Desktop\\WGS_project\\★★★WGS연구_유전 및 표현형 정리_v5.3.xlsx",sheet=1)
+original_data=read_excel("C:\\Users\\user\\Desktop\\WGS_project\\★★★WGS연구_유전 및 표현형 정리_v5.7.xlsx",sheet=1)
 
 ####Gene list####
 #Except list
 except <- c('negative','pending','CND','cCMV','B)CND','L)CND')
 
-#Gene List up
+#유전자 리스트 생성
 gene_list <- unique(na.omit(original_data[,15]))
 gene_list <- as.data.frame(gene_list %>% filter(!진단유전자 %in% except))
 gene_list <- gene_list[,1]
@@ -122,8 +123,21 @@ rm(mutation_count,SNV)
 #varianttype change
 onco1 <- data[,c(1,2,4,5,7,8)]
 
-onco1[is.na(onco1)] <- '.'
+onco1[is.na(onco1)] <- 999
 onco1 <- onco1[,-c(3,5)]
+
+for(i in 1:nrow(onco1)){
+  if(onco1$`variant type_M1_aa`[i]>onco1$`variant type_M2_aa`[i]){
+    tt <- onco1$`variant type_M1_aa`[i]
+    onco1$`variant type_M1_aa`[i] <- onco1$`variant type_M2_aa`[i]
+    onco1$`variant type_M2_aa`[i] <- tt
+  }else{
+    next
+  }
+}
+
+onco1$진단유전자 <- factor(onco1$진단유전자,levels=family_rank_list)
+onco1 <- onco1[order(onco1$진단유전자,onco1$`variant type_M1_aa`,onco1$`variant type_M2_aa`),]
 
 onco1$`variant type_M1_aa` <- gsub(1,"Missense",onco1$`variant type_M1_aa`)
 onco1$`variant type_M1_aa` <- gsub(2,"Frameshift",onco1$`variant type_M1_aa`)
@@ -143,10 +157,18 @@ onco1$`variant type_M2_aa` <- gsub(6,"SV*",onco1$`variant type_M2_aa`)
 onco1 <- cbind(onco1,paste(onco1[,3],onco1[,4],sep=";"))
 onco1 <- onco1[,c(1,2,5)]
 names(onco1) <- c('진단유전자','병록번호','varianttype')
-onco1$varianttype <- gsub(".","",onco1$varianttype,fixed = TRUE)
+onco1$varianttype <- gsub("999","",onco1$varianttype,fixed = TRUE)
+onco1$row <- rownames(onco1)
+
 
 onco2 <- data[,9:25]
-onco_fin <- cbind(onco1,onco2)
+onco2$row <- rownames(onco2)
+onco_fin <- merge(onco1,onco2,by='row')
+onco_fin$row <- factor(onco_fin$row,levels=onco1$row)
+onco_fin <- onco_fin[order(onco_fin$row),]
+onco_fin <- onco_fin[,-1]
+rownames(onco_fin)=NULL
+
 rm(onco1,onco2)
 #delete "initial audio" column
 onco_fin <- subset(onco_fin,select=-`initial audio`)
@@ -187,11 +209,7 @@ for(i in 1:nrow(onco_fin)){
   }
 }
 
-onco_fin$진단유전자 <- factor(onco_fin$진단유전자,levels=family_rank_list)
-onco_fin <- onco_fin[order(onco_fin$진단유전자),]
-rownames(onco_fin)=NULL
-
-#####Raregrid data setting#####
+#####Raregrid data setting(update 23.06.21)#####
 oncoprintdata2 <- onco_fin[,c(1,2,3,7:18,19)]
 
 oncoprintdata2[is.na(oncoprintdata2)] <- ""
@@ -199,30 +217,23 @@ oncoprintdata2[is.na(oncoprintdata2)] <- ""
 names(oncoprintdata2)[1] <- "Gene"
 names(oncoprintdata2)[4] <- "Age_at_Test"
 
-
 for(i in 1:nrow(oncoprintdata2)){
   if(oncoprintdata2$`hearing loss onset`[i]==1){
-    oncoprintdata2$Early_ID[i] = "Early"
-    oncoprintdata2$Late_ID[i] = ""
-    oncoprintdata2$Adult_onset[i] = ""
+    oncoprintdata2$`hearing loss onset`[i] = "Early"
   }else if(oncoprintdata2$`hearing loss onset`[i]==2|oncoprintdata2$`hearing loss onset`[i]==3){
-    oncoprintdata2$Early_ID[i] = ""
-    oncoprintdata2$Late_ID[i] = "Delay"
-    oncoprintdata2$Adult_onset[i] = ""
+    oncoprintdata2$`hearing loss onset`[i] = "Delay"
   }else if(oncoprintdata2$`hearing loss onset`[i]==4){
-    oncoprintdata2$Early_ID[i] = ""
-    oncoprintdata2$Late_ID[i] = ""
-    oncoprintdata2$Adult_onset[i] = "Adult"
+    oncoprintdata2$`hearing loss onset`[i] = "Adult"
   }else{
-    oncoprintdata2$Early_ID[i] = ""
-    oncoprintdata2$Late_ID[i] = ""
-    oncoprintdata2$Adult_onset[i] = ""
+    oncoprintdata2$`hearing loss onset`[i]= ""
   }
 }
 
 for(i in 1:nrow(oncoprintdata2)){
-  if(oncoprintdata2$syndromic_1[i]==2|oncoprintdata2$syndromic_2[i]==2){
+  if(oncoprintdata2$syndromic_1[i]==2){
     oncoprintdata2$Syndromic[i] = "Syndromic"
+  }else if(oncoprintdata2$syndromic_2[i]==2){
+    oncoprintdata2$Syndromic[i] = "Syndromic_mimic"
   }else{
     oncoprintdata2$Syndromic[i] = ""
   }
@@ -249,26 +260,16 @@ for(i in 1:nrow(oncoprintdata2)){
 for(i in 1:nrow(oncoprintdata2)){
   if(oncoprintdata2$Mixed[i]!="Mixed" && oncoprintdata2$Asymmetric[i]!="Asymmetric"){
     if(oncoprintdata2$`hearing severity, Lt`[i]==1|oncoprintdata2$`hearing severity, Lt`[i]==2|oncoprintdata2$`hearing severity, Rt`[i]==1|oncoprintdata2$`hearing severity, Rt`[i]==2){
-      oncoprintdata2$MildMod[i] = "MildMod"
-      oncoprintdata2$ModSev[i]=""
-      oncoprintdata2$SevProf[i]=""
+      oncoprintdata2$Severity[i] = "MildMod"
     }else if(oncoprintdata2$`hearing severity, Lt`[i]==3|oncoprintdata2$`hearing severity, Rt`[i]==3){
-      oncoprintdata2$MildMod[i]=""
-      oncoprintdata2$ModSev[i] = "ModSev"
-      oncoprintdata2$SevProf[i]=""
+      oncoprintdata2$Severity[i] = "ModSev"
     }else if(oncoprintdata2$`hearing severity, Lt`[i]==4|oncoprintdata2$`hearing severity, Lt`[i]==5|oncoprintdata2$`hearing severity, Rt`[i]==4|oncoprintdata2$`hearing severity, Rt`[i]==5){
-      oncoprintdata2$MildMod[i]=""
-      oncoprintdata2$ModSev[i] = ""
-      oncoprintdata2$SevProf[i] = "SevProf"
+      oncoprintdata2$Severity[i] = "SevProf"
     }else{
-      oncoprintdata2$MildMod[i] = ""
-      oncoprintdata2$ModSev[i] = ""
-      oncoprintdata2$SevProf[i] = ""
+      oncoprintdata2$Severity[i] = ""
     }
   }else{
-    oncoprintdata2$MildMod[i] = ""
-    oncoprintdata2$ModSev[i] = ""
-    oncoprintdata2$SevProf[i] = ""
+    oncoprintdata2$Severity[i] = ""
   }
 }
 
@@ -276,60 +277,47 @@ for(i in 1:nrow(oncoprintdata2)){
 for(i in 1:nrow(oncoprintdata2)){
   if(oncoprintdata2$Mixed[i]!="Mixed" && oncoprintdata2$Asymmetric[i]!="Asymmetric"){
     if(oncoprintdata2$`hearing configuration, Lt`[i]==1|oncoprintdata2$`hearing configuration, Rt`[i]==1){
-      oncoprintdata2$Flat[i] = "Flat"
-      oncoprintdata2$DownSloping[i] = ""
-      oncoprintdata2$Cookie[i] = ""
+      oncoprintdata2$Configuration[i] = "Flat"
     }else if(oncoprintdata2$`hearing configuration, Lt`[i]==2|oncoprintdata2$`hearing configuration, Rt`[i]==2|oncoprintdata2$`hearing configuration, Lt`[i]==3|oncoprintdata2$`hearing configuration, Rt`[i]==3){
-      oncoprintdata2$Flat[i] = ""
-      oncoprintdata2$DownSloping[i] = "DownSlop"
-      oncoprintdata2$Cookie[i] = ""
+      oncoprintdata2$Configuration[i] = "DownSlop"
     }else if(oncoprintdata2$`hearing configuration, Lt`[i]==4|oncoprintdata2$`hearing configuration, Rt`[i]==4){
-      oncoprintdata2$Flat[i] = ""
-      oncoprintdata2$DownSloping[i] = ""
-      oncoprintdata2$Cookie[i] = "Cookie"
+      oncoprintdata2$Configuration[i] = "Cookie"
     }else{
-      oncoprintdata2$Flat[i] = ""
-      oncoprintdata2$DownSloping[i] = ""
-      oncoprintdata2$Cookie[i] = ""
+      oncoprintdata2$Configuration[i] = ""
     }
   }else{
-    oncoprintdata2$Flat[i] = ""
-    oncoprintdata2$DownSloping[i]=""
-    oncoprintdata2$Cookie[i]=""
+    oncoprintdata2$Configuration[i]=""
   }
 }
 
 #Progressive
 for(i in 1:nrow(oncoprintdata2)){
   if(oncoprintdata2$progressive[i]==1){
-    oncoprintdata2$Sustan[i] = "Sustan"
-    oncoprintdata2$MildNone[i] =""
+    oncoprintdata2$progressive[i] = "Sustan"
   }else if(oncoprintdata2$progressive[i]==2){
-    oncoprintdata2$Sustan[i] = ""
-    oncoprintdata2$MildNone[i] ="Mild"
+    oncoprintdata2$progressive[i] ="Mild"
   }else if(oncoprintdata2$progressive[i]==3){
-    oncoprintdata2$Sustan[i]=""
-    oncoprintdata2$MildNone[i]="None"
+    oncoprintdata2$progressive[i]="None"
   }else{
-    oncoprintdata2$Sustan[i]=""
-    oncoprintdata2$MildNone[i]=""
+    oncoprintdata2$progressive[i]=""
   }
 }
 
 #Family count>=3
 oncoprintdata3 <- oncoprintdata2[1:163,]
+oncoprintdata3 <- oncoprintdata2
 oncoprintdata3 <- oncoprintdata3[,-16]
 
-data3 <- oncoprintdata3[,c(2,1,16:29)]
+data3 <- oncoprintdata3[,c(2,1,3,14,16:20,15)]
 data3 <- as.data.frame(t(data3))
 names(data3) <- c(1:ncol(data3))
 data3 <- data3[-1,]
 
-data4 <- oncoprintdata3[,2:3]
-data4 <- as.data.frame(t(data4))
-names(data4) <- data4[1,]
-data4 <- data4[-1,]
-rownames(data4) <- "Variant_Type"
+#data4 <- oncoprintdata3[,2:3]
+#data4 <- as.data.frame(t(data4))
+#names(data4) <- data4[1,]
+#data4 <- data4[-1,]
+#rownames(data4) <- "Variant_Type"
 
 #Display with variant type
 for(i in 2:13){
@@ -351,7 +339,10 @@ col=c("Missense" = "red", "Frameshift" = "orange","Nonsense"="yellow","Inframe_d
       "GJB2"="lightgoldenrod2","SLC26A4"="lightcyan3","STRC"="lavenderblush2","USH2A"="seagreen4","CDH23"="violetred3","MPZL2"="thistle4",
       "OTOA"="lightyellow","MYO15A"="#63666A","EYA1"="#FFE900","SIX1"="#2AD2C9","WFS1"="#9063CD","ACTG1"="#FCAEBB",
       "COL4A3"="#74D1Ea","LMX1A"="#EA6811","TECTA"="#DDA46F","COL11A1"="#69B3E7","COL1A1"="#E0457B","KCNQ4"="#7C3A2D",
-      "MT-TL1"="black","MYO6"="#E4002B","POU4F3"="#0057B8","TMPRSS3"="#ABD156","Sustan"="sienna4","Mild"="#A8dddd","None"="#A8bbbb")
+      "MT-TL1"="black","MYO6"="#E4002B","POU4F3"="#0057B8","TMPRSS3"="#ABD156",
+      "Early"="#c0ffff","Delay"="#28e7ff","Adult"="#00bfff","Syndromic"="#ffaf00","Syndromic_mimic"="#fde1b4","Mixed"="#ffe4e1",
+      "Asymmetric"="#a7faeb","MildMod"="#ffdcff","ModSev"="#FF9DFF","SevProf"="#ff6eed","Flat"="#d2ffd2","DownSlop"="#a8f552",
+      "Cookie"="#4ab34a","Sustan"="#191919","Mild"="#666666","None"="#b2b2b2")
 
 oncoPrint(data3,
           alter_fun = list(
@@ -395,6 +386,19 @@ oncoPrint(data3,
             "MYO6" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MYO6"], col = NA)),
             "POU4F3" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["POU4F3"], col = NA)),
             "TMPRSS3" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["TMPRSS3"], col = NA)),
+            "Early" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Early"], col = NA)),
+            "Delay" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Delay"], col = NA)),
+            "Adult" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Adult"], col = NA)),
+            "Syndromic" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Syndromic"], col = NA)),
+            "Syndromic_mimic" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Syndromic_mimic"], col = NA)),
+            "Mixed" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Mixed"], col = NA)),
+            "Asymmetric" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Asymmetric"], col = NA)),
+            "MildMod" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MildMod"], col = NA)),
+            "ModSev" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["ModSev"], col = NA)),
+            "SevProf" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SevProf"], col = NA)),
+            "Flat" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Flat"], col = NA)),
+            "DownSlop" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["DownSlop"], col = NA)),
+            "Cookie" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Cookie"], col = NA)),
             "Sustan" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Sustan"], col = NA)),
             "Mild" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["Mild"], col = NA)),
             "None" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["None"], col = NA))
@@ -1039,34 +1043,151 @@ plot_ly(gr2count,labels=~진단유전자,values=~count,textinfo='label+value+per
 #####classification(supp plot)#####
 a <- oncoprintdata2[c(138:141,152:160),]
 a$`functional classification` <- c(7,7,7,7,4,4,4,2,2,2,7,7,7)
-oncoprintdata2 <- rbind(oncoprintdata2,a)
+classrare <- rbind(oncoprintdata2,a)
 rm(a)
 
-for(i in 1:nrow(oncoprintdata2)){
-  if(oncoprintdata2$`functional classification` [i]=="3,4"|oncoprintdata2$`functional classification` [i] == "3,7"){
-    oncoprintdata2$`functional classification` [i] =  "3"
-  }else if(oncoprintdata2$`functional classification`[i]=="1,2"){
-    oncoprintdata2$`functional classification`[i]="1"
+for(i in 1:nrow(classrare)){
+  if(classrare$`functional classification` [i]=="3,4"|classrare$`functional classification` [i] == "3,7"){
+    classrare$`functional classification` [i] =  "3"
+  }else if(classrare$`functional classification`[i]=="1,2"){
+    classrare$`functional classification`[i]="1"
   }
   else{
     next
   }
 }
 
-oncoprintdata2$진단유전자 <- factor(oncoprintdata2$Gene,levels=family_rank_list)
-oncoprintdata2 <- oncoprintdata2[order(oncoprintdata2$`functional classification`,oncoprintdata2$Gene),]
-rownames(oncoprintdata2)=NULL
+classrare <- classrare[order(classrare$`functional classification`,classrare$Gene),]
+rownames(classrare)=NULL
 
-oncoraregrid <- oncoprintdata2[,c(2,1,16:30)]
-oncoraregrid <- as.data.frame(t(oncoraregrid))
-names(oncoraregrid) <- c(1:ncol(oncoraregrid))
-oncoraregrid <- oncoraregrid[-1,]
-rownames(oncoraregrid)[2] <- c("Classification")
+for(i in 1:nrow(classrare)){
+  if(classrare$`hearing loss onset`[i]=="Early"){
+    classrare$Early_ID[i] = "Early"
+    classrare$Late_ID[i] = ""
+    classrare$Adult_onset[i] = ""
+  }else if(classrare$`hearing loss onset`[i]=="Delay"){
+    classrare$Early_ID[i] = ""
+    classrare$Late_ID[i] = "Delay"
+    classrare$Adult_onset[i] = ""
+  }else if(classrare$`hearing loss onset`[i]=="Adult"){
+    classrare$Early_ID[i] = ""
+    classrare$Late_ID[i] = ""
+    classrare$Adult_onset[i] = "Adult"
+  }else{
+    classrare$Early_ID[i] = ""
+    classrare$Late_ID[i] = ""
+    classrare$Adult_onset[i] = ""
+  }
+}
 
-for(i in 2:nrow(oncoraregrid)){
-  for(j in 1:ncol(oncoraregrid)){
-    if(oncoraregrid[i,j]!=""){
-      oncoraregrid[i,j] <- oncoraregrid[2,j]
+for(i in 1:nrow(classrare)){
+  if(classrare$syndromic_1[i]==2|classrare$syndromic_2[i]==2){
+    classrare$Syndromic[i] = "Syndromic"
+  }else{
+    classrare$Syndromic[i] = ""
+  }
+}
+
+for(i in 1:nrow(classrare)){
+  if(classrare$`hearing loss type, Rt`[i]==2|classrare$`hearing loss type, Lt`[i]==2){
+    classrare$Mixed[i] = "Mixed"
+  }else{
+    classrare$Mixed[i] = ""
+  }
+}
+
+for(i in 1:nrow(classrare)){
+  if(classrare$asymmetry[i]==1|classrare$asymmetry[i]==2){
+    classrare$Asymmetric[i] = "Asymmetric"
+  }else{
+    classrare$Asymmetric[i] = ""
+  }
+}
+
+#Except Asymmetric, Mixed
+#Severity
+for(i in 1:nrow(classrare)){
+  if(classrare$Mixed[i]!="Mixed" && classrare$Asymmetric[i]!="Asymmetric"){
+    if(classrare$`hearing severity, Lt`[i]==1|classrare$`hearing severity, Lt`[i]==2|classrare$`hearing severity, Rt`[i]==1|classrare$`hearing severity, Rt`[i]==2){
+      classrare$MildMod[i] = "MildMod"
+      classrare$ModSev[i]=""
+      classrare$SevProf[i]=""
+    }else if(classrare$`hearing severity, Lt`[i]==3|classrare$`hearing severity, Rt`[i]==3){
+      classrare$MildMod[i]=""
+      classrare$ModSev[i] = "ModSev"
+      classrare$SevProf[i]=""
+    }else if(classrare$`hearing severity, Lt`[i]==4|classrare$`hearing severity, Lt`[i]==5|classrare$`hearing severity, Rt`[i]==4|classrare$`hearing severity, Rt`[i]==5){
+      classrare$MildMod[i]=""
+      classrare$ModSev[i] = ""
+      classrare$SevProf[i] = "SevProf"
+    }else{
+      classrare$MildMod[i] = ""
+      classrare$ModSev[i] = ""
+      classrare$SevProf[i] = ""
+    }
+  }else{
+    classrare$MildMod[i] = ""
+    classrare$ModSev[i] = ""
+    classrare$SevProf[i] = ""
+  }
+}
+
+#Configuration
+for(i in 1:nrow(classrare)){
+  if(classrare$Mixed[i]!="Mixed" && classrare$Asymmetric[i]!="Asymmetric"){
+    if(classrare$`hearing configuration, Lt`[i]==1|classrare$`hearing configuration, Rt`[i]==1){
+      classrare$Flat[i] = "Flat"
+      classrare$DownSloping[i] = ""
+      classrare$Cookie[i] = ""
+    }else if(classrare$`hearing configuration, Lt`[i]==2|classrare$`hearing configuration, Rt`[i]==2|classrare$`hearing configuration, Lt`[i]==3|classrare$`hearing configuration, Rt`[i]==3){
+      classrare$Flat[i] = ""
+      classrare$DownSloping[i] = "DownSlop"
+      classrare$Cookie[i] = ""
+    }else if(classrare$`hearing configuration, Lt`[i]==4|classrare$`hearing configuration, Rt`[i]==4){
+      classrare$Flat[i] = ""
+      classrare$DownSloping[i] = ""
+      classrare$Cookie[i] = "Cookie"
+    }else{
+      classrare$Flat[i] = ""
+      classrare$DownSloping[i] = ""
+      classrare$Cookie[i] = ""
+    }
+  }else{
+    classrare$Flat[i] = ""
+    classrare$DownSloping[i]=""
+    classrare$Cookie[i]=""
+  }
+}
+
+#Progressive
+for(i in 1:nrow(classrare)){
+  if(classrare$progressive[i]=="Sustan"){
+    classrare$Sustan[i] = "Sustan"
+    classrare$MildNone[i] =""
+  }else if(classrare$progressive[i]=="Mild"){
+    classrare$Sustan[i] = ""
+    classrare$MildNone[i] ="Mild"
+  }else if(classrare$progressive[i]=="None"){
+    classrare$Sustan[i]=""
+    classrare$MildNone[i]="None"
+  }else{
+    classrare$Sustan[i]=""
+    classrare$MildNone[i]=""
+  }
+}
+
+
+
+classrare2 <- classrare[,c(2,1,3,16,22:24,17:19,25:32)]
+classrare2 <- as.data.frame(t(classrare2))
+names(classrare2) <- c(1:ncol(classrare2))
+classrare2 <- classrare2[-1,]
+rownames(classrare2)[2] <- c("VariantType")
+
+for(i in 4:nrow(classrare2)){
+  for(j in 1:ncol(classrare2)){
+    if(classrare2[i,j]!=""){
+      classrare2[i,j] <- classrare2[3,j]
     }
     else{
       next
@@ -1074,8 +1195,10 @@ for(i in 2:nrow(oncoraregrid)){
   }
 }
 
-row_ord <- rownames(oncoraregrid)
-col_ord <- colnames(oncoraregrid)
+classrare2 <- classrare2[-3,]
+
+row_ord <- rownames(classrare2)
+col_ord <- colnames(classrare2)
 
 col=c("1"="#951123","2"="#ABEEBA","3"="#FFE760","4"="#A8eeee","5"="#EE55FF","6"="#1a5a54","7"="#63666A","8"="#877DDD",
       "GJB2"="lightgoldenrod2","SLC26A4"="lightcyan3","STRC"="lavenderblush2","USH2A"="seagreen4","CDH23"="violetred3","MPZL2"="thistle4",
@@ -1088,9 +1211,12 @@ col=c("1"="#951123","2"="#ABEEBA","3"="#FFE760","4"="#A8eeee","5"="#EE55FF","6"=
       "MT-RNR1"="grey","MYH9"="white","NLRP3"="#a651be","OTOG"="#1a5a54","PDE6B"="#e4a65a","SLC12A3"="#b1c654",
       "SOX10"="#A8eeee","SSBP1"="#f16aaa","TJP2"="sienna4","SLC12A2"="#abcee5",
       "COQ6"="wheat3", "CTCF"="palegoldenrod", "DNAJC3"="khaki4", "MT-ND5"="honeydew3", "RBM10"="azure", "SMAD4"="lightsalmon3", 
-      "SPATA5"="seagreen2")
+      "SPATA5"="seagreen2","OSBPL2"="gold",
+      "Missense" = "red", "Frameshift" = "orange","Nonsense"="yellow","Inframe_del/dup"="green","Splicing"="blue","SV"="purple","mtRNA"="black",
+      "Missense*" = "red", "Frameshift*" = "orange","Nonsense*"="yellow","Inframe_del/dup*"="green","Splicing*"="blue","SV*"="purple","mtRNA*"="black"
+)
 
-oncoPrint(oncoraregrid,
+oncoPrint(classrare2,
           alter_fun = list(
             background = function(x, y, w, h) {
               grid.rect(x,y,w*0.9,h*0.9,
@@ -1104,6 +1230,20 @@ oncoPrint(oncoraregrid,
             "6" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["6"], col = NA)),
             "7" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["7"], col = NA)),
             "8" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["8"], col = NA)),
+            "Missense" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["Missense"], col = NA)),
+            "Frameshift" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["Frameshift"], col = NA)),
+            "Nonsense" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["Nonsense"], col = NA)),
+            "Inframe_del/dup" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["Inframe_del/dup"], col = NA)),
+            "SV" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["SV"], col = NA)),
+            "Splicing" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["Splicing"], col = NA)),
+            "mtRNA" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["mtRNA"], col = NA)),
+            "Missense*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Missense*"], col = NA)),
+            "Frameshift*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Frameshift*"], col = NA)),
+            "Nonsense*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Nonsense*"], col = NA)),
+            "Inframe_del/dup*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Inframe_del/dup*"], col = NA)),
+            "SV*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["SV*"], col = NA)),
+            "Splicing*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="left",gp = gpar(fill = col["Splicing*"], col = NA)),
+            "mtRNA*" = function(x, y, w, h) grid.rect(x, y, w*0.45, h*0.9,just="right",gp = gpar(fill = col["mtRNA"], col = NA)),
             "GJB2" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["GJB2"], col = NA)),
             "SLC26A4" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SLC26A4"], col = NA)),
             "STRC" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["STRC"], col = NA)),
@@ -1162,7 +1302,8 @@ oncoPrint(oncoraregrid,
             "MT-ND5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MT-ND5"], col = NA)),
             "RBM10" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["RBM10"], col = NA)),
             "SMAD4" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SMAD4"], col = NA)),
-            "SPATA5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SPATA5"], col = NA))
+            "SPATA5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SPATA5"], col = NA)),
+            "OSBPL2" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["OSBPL2"], col = NA))
           ),
           col = col,row_names_side = "left",pct_side = "right",show_column_names = FALSE,top_annotation = NULL,right_annotation = NULL,
           alter_fun_is_vectorized = FALSE,column_order = col_ord,show_pct=FALSE,row_order = row_ord)
@@ -1190,7 +1331,7 @@ col=c("GJB2"="lightgoldenrod2","SLC26A4"="lightcyan3","STRC"="lavenderblush2","U
       "MT-RNR1"="grey","MYH9"="white","NLRP3"="#a651be","OTOG"="#1a5a54","PDE6B"="#e4a65a","SLC12A3"="#b1c654",
       "SOX10"="#A8eeee","SSBP1"="#f16aaa","TJP2"="sienna4","SLC12A2"="#abcee5",
       "COQ6"="wheat3", "CTCF"="palegoldenrod", "DNAJC3"="khaki4", "MT-ND5"="honeydew3", "RBM10"="azure", "SMAD4"="lightsalmon3", 
-      "SPATA5"="seagreen2")
+      "SPATA5"="seagreen2","OSBPL2"="gold")
 
 oncoPrint(oncogene,
           alter_fun = list(
@@ -1256,7 +1397,8 @@ oncoPrint(oncogene,
             "MT-ND5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["MT-ND5"], col = NA)),
             "RBM10" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["RBM10"], col = NA)),
             "SMAD4" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SMAD4"], col = NA)),
-            "SPATA5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SPATA5"], col = NA))
+            "SPATA5" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["SPATA5"], col = NA)),
+            "OSBPL2" = function(x, y, w, h) grid.rect(x, y, w*0.9, h*0.9,gp = gpar(fill = col["OSBPL2"], col = NA))
           ),
           col = col,row_names_side = "left",pct_side = "right",show_column_names = FALSE,top_annotation = NULL,right_annotation = NULL,
           alter_fun_is_vectorized = FALSE,show_pct=FALSE)
@@ -1279,7 +1421,7 @@ lgd=Legend(labels=c("GJB2","SLC26A4","STRC","USH2A","CDH23","MPZL2","OTOA","MYO1
 dev.new()
 draw(lgd)
 
-#####Fig2 Bar&Pie#####
+#####Fig3 Bar&Pie##### 
 diagno <- as.data.frame(data$진단유전자)
 diagno1 <- as.data.frame(original_data %>% filter(진단유전자 %in% gene_list))
 diagno2 <- as.data.frame(original_data %>% filter(진단유전자 %in% except))
@@ -1302,25 +1444,45 @@ dev.new()
 draw(lgd1)
 
 #A
-#1
+#1_Original
 names <- familycount$진단유전자
+number <- familycount[!duplicated(familycount$v1),]
 
 ggplot(data=familycount,mapping=aes(x=reorder(진단유전자,`v1`),y=v1))+
   scale_x_discrete(limits=rev(names))+
   scale_y_continuous(limits=c(0,25),expand=c(0,0))+
   geom_bar(mapping=aes(fill=진단유전자),stat="identity",fill="#42E1a5")+
   coord_flip()+
-  geom_label(aes(label=v1),nudge_y=0.6,nudge_x=-0.5,size=4,data=numberdata)+
+  geom_label(aes(label=v1),nudge_y=0.6,nudge_x=-0.5,size=4,data=number)+
   theme_classic()+
   theme(legend.position="none",axis.title.x = element_blank(),axis.title.y = element_blank())
 
+#1_Proportion
+familycount_inher <- data %>% 
+  group_by(`진단유전자`,`inheritance pattern`) %>% 
+  summarize(v1=n())
+
+familycount_inher$진단유전자 <- factor(familycount_inher$진단유전자,levels=family_rank_list)
+familycount_inher <- familycount_inher[order(familycount_inher$진단유전자),]
+
+color1=c('#FFB3B5','#86D8A4','#d2ffd2','#6CD6f1','#fde1b4','#ffdcff')
+ggplot(familycount_inher,aes(x=진단유전자,y=v1,fill=factor(`inheritance pattern`)))+
+  scale_x_discrete(limits=rev(names))+
+  scale_y_continuous(limits=c(0,25),expand=c(0,0))+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=color1)+
+  theme_classic()+
+  theme(legend.position=c(0.65,0.2),legend.title=element_blank(),
+        axis.title.y=element_blank(),axis.title.x=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+  
+  coord_flip()
+
+#scale_fill_discrete_qualitative(palette = 'Set 3')
 #2
 data_fill <- variant_type[,c(1,3,4,5)]
 
 data_vr1 <- data_fill %>% 
   group_by(진단유전자,variant_type_nt) %>% 
   summarize(v1=sum(count)) 
-
 data_vr2 <- data_fill%>% 
   group_by(진단유전자,variant_type_aa) %>% 
   summarize(v2=sum(count))
@@ -1349,22 +1511,20 @@ ggplot(data_vr1,aes(x=진단유전자,y=v1,fill=factor(varianttype1)))+
         axis.title.y=element_blank(),axis.title.x=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+  
   coord_flip()
 
-
 ggplot(data_vr2,aes(x=진단유전자,y=v2,fill=factor(varianttype2)))+
   scale_x_discrete(limits=rev(names))+
-  scale_y_continuous(limits=c(0,46),expand=c(0,0))+
+  scale_y_continuous(limits=c(0,50),expand=c(0,0))+
   geom_bar(stat="identity")+
-  scale_fill_discrete_qualitative(palette = 'Set 3')+
+  scale_fill_manual(values=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#aaaaaa'))+
   theme_classic()+
   theme(legend.position=c(0.65,0.2),legend.title=element_blank(),
         axis.title.y=element_blank(),axis.title.x=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+  
   coord_flip()
 
 lgd1=Legend(labels=c("Missense","Frameshift","Nonsense","Inframe del/dup","Splicing","SV","Mitochondria"),
-            legend_gp=gpar(fill=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#F5B5F0')))
+            legend_gp=gpar(fill=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#aaaaaa')))
 dev.new()
 draw(lgd1)
-
 
 
 #B
@@ -1390,19 +1550,19 @@ draw(lgd1)
 
 data_vr2 <- variant_type %>% 
   group_by(`variant_type_aa`) %>% 
-  summarize(v1=n())
+  summarize(v1=sum(count))
 names(data_vr2)[1] <- c("varianttype2")
 
 
 plot_ly(data_vr2,labels=~varianttype2,values=~v1,textposition='none',
-        marker=list(colors=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#154689')),sort=FALSE) %>% 
+        marker=list(colors=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#aaaaaa')),sort=FALSE) %>% 
   add_pie(hole=0.5) %>% 
   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          showlegend=FALSE)
 
 lgd1=Legend(labels=c("Missense","Frameshift","Nonsense","Inframe del/dup","Splicing","SV","Mitochondria"),
-            legend_gp=gpar(fill=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#154689')),nrow=2)
+            legend_gp=gpar(fill=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC','#D1ACF9','#aaaaaa')),nrow=2)
 dev.new()
 draw(lgd1)
 
@@ -1425,9 +1585,10 @@ draw(lgd1)
 data_in <- data %>% 
   group_by(`inheritance pattern`) %>% 
   summarize(v1=n())
+#data_in <- data_in[c(1,3,4,5,6,2),]
 
 plot_ly(data_in,labels=~`inheritance pattern`,values=~v1,textposition='none',
-        marker=list(colors=c('#FFB3B5','#D5C783','#86D8A4','#6CD6E4','#AAC8FC')),sort=FALSE) %>% 
+        marker=list(colors=c('#FFB3B5','#86D8A4','#d2ffd2','#6CD6f1','#fde1b4','#ffdcff')),sort=FALSE) %>% 
   add_pie(hole=0.5) %>% 
   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
@@ -1729,3 +1890,119 @@ lgd=Legend(labels=c("Missense", "Frameshift","Nonsense","Inframe_del/dup","Splic
                                  "sienna4","#A8dddd","#A8bbbb")),nrow=1)
 dev.new()
 draw(lgd)
+######Raregrid data setting before updated#######
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$`hearing loss onset`[i]==1){
+    oncoprintdata2$Early_ID[i] = "Early"
+    oncoprintdata2$Late_ID[i] = ""
+    oncoprintdata2$Adult_onset[i] = ""
+  }else if(oncoprintdata2$`hearing loss onset`[i]==2|oncoprintdata2$`hearing loss onset`[i]==3){
+    oncoprintdata2$Early_ID[i] = ""
+    oncoprintdata2$Late_ID[i] = "Delay"
+    oncoprintdata2$Adult_onset[i] = ""
+  }else if(oncoprintdata2$`hearing loss onset`[i]==4){
+    oncoprintdata2$Early_ID[i] = ""
+    oncoprintdata2$Late_ID[i] = ""
+    oncoprintdata2$Adult_onset[i] = "Adult"
+  }else{
+    oncoprintdata2$Early_ID[i] = ""
+    oncoprintdata2$Late_ID[i] = ""
+    oncoprintdata2$Adult_onset[i] = ""
+  }
+}
+
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$syndromic_1[i]==2|oncoprintdata2$syndromic_2[i]==2){
+    oncoprintdata2$Syndromic[i] = "Syndromic"
+  }else{
+    oncoprintdata2$Syndromic[i] = ""
+  }
+}
+
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$`hearing loss type, Rt`[i]==2|oncoprintdata2$`hearing loss type, Lt`[i]==2){
+    oncoprintdata2$Mixed[i] = "Mixed"
+  }else{
+    oncoprintdata2$Mixed[i] = ""
+  }
+}
+
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$asymmetry[i]==1|oncoprintdata2$asymmetry[i]==2){
+    oncoprintdata2$Asymmetric[i] = "Asymmetric"
+  }else{
+    oncoprintdata2$Asymmetric[i] = ""
+  }
+}
+
+#Except Asymmetric, Mixed
+#Severity
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$Mixed[i]!="Mixed" && oncoprintdata2$Asymmetric[i]!="Asymmetric"){
+    if(oncoprintdata2$`hearing severity, Lt`[i]==1|oncoprintdata2$`hearing severity, Lt`[i]==2|oncoprintdata2$`hearing severity, Rt`[i]==1|oncoprintdata2$`hearing severity, Rt`[i]==2){
+      oncoprintdata2$MildMod[i] = "MildMod"
+      oncoprintdata2$ModSev[i]=""
+      oncoprintdata2$SevProf[i]=""
+    }else if(oncoprintdata2$`hearing severity, Lt`[i]==3|oncoprintdata2$`hearing severity, Rt`[i]==3){
+      oncoprintdata2$MildMod[i]=""
+      oncoprintdata2$ModSev[i] = "ModSev"
+      oncoprintdata2$SevProf[i]=""
+    }else if(oncoprintdata2$`hearing severity, Lt`[i]==4|oncoprintdata2$`hearing severity, Lt`[i]==5|oncoprintdata2$`hearing severity, Rt`[i]==4|oncoprintdata2$`hearing severity, Rt`[i]==5){
+      oncoprintdata2$MildMod[i]=""
+      oncoprintdata2$ModSev[i] = ""
+      oncoprintdata2$SevProf[i] = "SevProf"
+    }else{
+      oncoprintdata2$MildMod[i] = ""
+      oncoprintdata2$ModSev[i] = ""
+      oncoprintdata2$SevProf[i] = ""
+    }
+  }else{
+    oncoprintdata2$MildMod[i] = ""
+    oncoprintdata2$ModSev[i] = ""
+    oncoprintdata2$SevProf[i] = ""
+  }
+}
+
+#Configuration
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$Mixed[i]!="Mixed" && oncoprintdata2$Asymmetric[i]!="Asymmetric"){
+    if(oncoprintdata2$`hearing configuration, Lt`[i]==1|oncoprintdata2$`hearing configuration, Rt`[i]==1){
+      oncoprintdata2$Flat[i] = "Flat"
+      oncoprintdata2$DownSloping[i] = ""
+      oncoprintdata2$Cookie[i] = ""
+    }else if(oncoprintdata2$`hearing configuration, Lt`[i]==2|oncoprintdata2$`hearing configuration, Rt`[i]==2|oncoprintdata2$`hearing configuration, Lt`[i]==3|oncoprintdata2$`hearing configuration, Rt`[i]==3){
+      oncoprintdata2$Flat[i] = ""
+      oncoprintdata2$DownSloping[i] = "DownSlop"
+      oncoprintdata2$Cookie[i] = ""
+    }else if(oncoprintdata2$`hearing configuration, Lt`[i]==4|oncoprintdata2$`hearing configuration, Rt`[i]==4){
+      oncoprintdata2$Flat[i] = ""
+      oncoprintdata2$DownSloping[i] = ""
+      oncoprintdata2$Cookie[i] = "Cookie"
+    }else{
+      oncoprintdata2$Flat[i] = ""
+      oncoprintdata2$DownSloping[i] = ""
+      oncoprintdata2$Cookie[i] = ""
+    }
+  }else{
+    oncoprintdata2$Flat[i] = ""
+    oncoprintdata2$DownSloping[i]=""
+    oncoprintdata2$Cookie[i]=""
+  }
+}
+
+#Progressive
+for(i in 1:nrow(oncoprintdata2)){
+  if(oncoprintdata2$progressive[i]==1){
+    oncoprintdata2$Sustan[i] = "Sustan"
+    oncoprintdata2$MildNone[i] =""
+  }else if(oncoprintdata2$progressive[i]==2){
+    oncoprintdata2$Sustan[i] = ""
+    oncoprintdata2$MildNone[i] ="Mild"
+  }else if(oncoprintdata2$progressive[i]==3){
+    oncoprintdata2$Sustan[i]=""
+    oncoprintdata2$MildNone[i]="None"
+  }else{
+    oncoprintdata2$Sustan[i]=""
+    oncoprintdata2$MildNone[i]=""
+  }
+}

@@ -18,7 +18,7 @@ original_data=read_excel("C:\\Users\\user\\Desktop\\WGS_project\\★★★WGS연
 except <- c('negative','pending','CND','cCMV','B)CND','L)CND')
 
 #유전자 리스트 생성
-#Gene_List_Up
+#Gene_List_Up 
 gene_list <- unique(na.omit(original_data[,15]))
 gene_list <- as.data.frame(gene_list %>% filter(!진단유전자 %in% except))
 gene_list <- gene_list[,1]

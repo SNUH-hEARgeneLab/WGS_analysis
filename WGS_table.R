@@ -1,5 +1,7 @@
 install_github("dustinfife/fifer")
 install.packages("moonBook")
+install.packages("epitools")
+
 library(readxl)
 library(dplyr)
 library(tidyr)
@@ -7,8 +9,10 @@ library(moonBook)
 library(rcompanion)
 library(devtools)
 library(fifer)
+library(epitools)
+install.packages("rcompanion")
 
-tabledata <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\data.csv",header = TRUE,fileEncoding = "euc-kr")
+tabledata <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\tabledata.csv",header = TRUE,fileEncoding = "euc-kr")
 tabledata <- tabledata[!is.na(tabledata$진단유전자),]
 tabledata <- tabledata[tabledata$진단유전자!="",]
 tabledata[is.na(tabledata)] <- ""
@@ -55,21 +59,31 @@ for(i in 1:nrow(tabledata)){
   }
 }
 
-
 test1 <- tabledata[,c(1:4,12,13,15)]
 test1 <- as.data.frame(test1)
+
+for(i in 1:nrow(test1)){
+  if(test1$Diag[i]=="0"&test1$syndromic_1[i]==2){
+    test1$syndromic_2[i]=2
+  }else{
+    next
+  }
+}
+
+for(i in 1:nrow(test1)){
+  if(test1$Diag[i]=="1"&test1$syndromic_1[i]==2){
+    test1$syndromic_2[i]=2
+  }else{
+    next
+  }
+}
 
 a <- mytable(Diag~.,data=test1,method=3)
 a
 summary(a)
 
-median(test1[test1$Diag==1,]$나이)
-max(test1[test1$Diag==1,]$나이)
-min(test1[test1$Diag==1,]$나이)
-median(test1[test1$Diag==0,]$나이)
-max(test1[test1$Diag==0,]$나이)
-min(test1[test1$Diag==0,]$나이)
-
+data <- matrix(c(60,17,148,169),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #Hearing Loss Type~Configuration,Asym
 #한쪽 귀라도 Mixed인 경우 Mixed로 Count
@@ -84,6 +98,8 @@ for(i in 1:nrow(tabledata)){
 
 a <- mytable(Diag~Mixed,data=tabledata,method=3)
 a
+data <- matrix(c(19,9,189,177),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #Mixed인 사람들은 제외하고 진행(data=test2)
 test2 <- tabledata[tabledata$Mixed!=1,]
@@ -91,6 +107,8 @@ test2 <- tabledata[tabledata$Mixed!=1,]
 #Asymmetry
 a <- mytable(Diag~asymmetry,data=test2,method=3)
 a
+data <- matrix(c(19,38,170,139),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #Hearing Loss Severity 
 test3 <- test2
@@ -144,7 +162,10 @@ for(i in 1:nrow(test2)){
 
 a <- mytable(Diag~MildMod+ModSev+SevPro,data=test2,method=3)
 a <- mytable(Diag~Sever,data=test2,method=3)
+
 a
+data <- matrix(c(48,40,122,99),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #Configuration
 for(i in 1:nrow(test2)){
@@ -197,6 +218,8 @@ a <- mytable(Diag~Flat+DownSlop+Cookie+UpSlop,data=test2,method=3)
 a <- mytable(Diag~Config,data=test2,method=3)
 
 a
+data <- matrix(c(2,7,168,132),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #####Adjusted OR#####
 for(i in 1:nrow(test1)){
@@ -238,7 +261,7 @@ for(i in 1:nrow(test1)){
 test1$Diag <- as.numeric(test1$Diag)
 test1 <- cbind(test1,tabledata$Mixed)
 
-model <- glm(Diag~EI+AO+Family.history+SYN2,family='binomial'(link='logit'),data=test1)
+model <- glm(Diag~EI+AO+Family.history+SYN,family='binomial'(link='logit'),data=test1)
 summary(model)
 exp(cbind(OR=coef(model), confint(model)))
 
@@ -282,6 +305,10 @@ for(i in 1:nrow(test1)){
 a <- mytable(Diag~.,data=test1,method=3)
 a
 summary(a)
+
+data <- matrix(c(15,37,2,18),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+
 
 test1.1 <- test1
 
@@ -348,7 +375,7 @@ a
 summary(a)
 
 test1.1$Diag <- as.numeric(test1.1$Diag)
-model <- glm(Diag~EI+syndromic_1+DR+TRIO,family='binomial'(link='logit'),data=test1.1)
+model <- glm(Diag~EI+DR,family='binomial'(link='logit'),data=test1.1)
 summary(model)
 exp(cbind(OR=coef(model), confint(model)))
 
@@ -366,6 +393,9 @@ for(i in 1:nrow(supptabledata)){
 a <- mytable(Diag~Mixed,data=supptabledata,method=3)
 a
 summary(a)
+data <- matrix(c(1,1,16,54),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+
 
 #Mixed인 사람들은 제외하고 진행(data=test2)
 test2 <- supptabledata[supptabledata$Mixed!=1,]
@@ -373,6 +403,8 @@ test2 <- supptabledata[supptabledata$Mixed!=1,]
 #Asymmetry
 a <- mytable(Diag~asymmetry,data=test2,method=3)
 a
+data <- matrix(c(1,13,15,41),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 #Hearing Loss Severity 
 for(i in 1:nrow(test2)){
@@ -425,6 +457,13 @@ test3 <- test2[test2$asymmetry==3,]
 a <- mytable(Diag~MildMod+ModSev+SevPro,data=test3,method=3)
 a
 summary(a)
+
+data <- matrix(c(5,10,10,31),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+data <- matrix(c(4,15,11,26),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+data <- matrix(c(6,12,9,29),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
 
 a <- mytable(Diag~severity,data=test3,method=3)
 a
@@ -484,12 +523,19 @@ a <- mytable(Diag~Flat+DownSlop+Cookie+UpSlop,data=test3,method=3)
 a
 summary(a)
 
+data <- matrix(c(7,19,8,22),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+data <- matrix(c(5,15,10,26),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+data <- matrix(c(2,2,13,39),nrow=2,ncol=2,byrow=TRUE)
+oddsratio(data)
+
 a <- mytable(Diag~config,data=test3,method=3)
 a
 summary(a)
 
 #####Classification Statistics/double primary 포함#####
-supptabledata2 <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\testdata2.csv",header = TRUE,fileEncoding = "euc-kr")
+supptabledata2 <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\tabledata2.csv",header = TRUE,fileEncoding = "euc-kr")
 
 supptabledata2 <- supptabledata2[!is.na(supptabledata2$진단유전자),]
 supptabledata2 <- supptabledata2[supptabledata2$진단유전자!="",]
@@ -530,7 +576,7 @@ supptabledata2 <- supptabledata2[supptabledata2$Diag==1,]
 supptabledata2 <- supptabledata2[order(supptabledata2$functional.classification),]
 rownames(supptabledata2) <- NULL
 
-a <- supptabledata2[c(59:61,86:95),]
+a <- supptabledata2[c(60:62,87:96),]
 a$functional.classification <- c(2,2,2,4,4,4,7,7,7,7,7,7,7)
 supptabledata2 <- rbind(supptabledata2,a)
 rm(a)
@@ -685,10 +731,26 @@ classifi2 <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\2.csv",header = TR
 rownames(classifi2) <- classifi2[,1]
 classifi2 <- t(classifi2[,-1])
 
-chisq.post.hoc(classifi2[,11:12],simulate.p.value=TRUE)
-chisq.test(classifi2[,11:12])
+chisq.post.hoc(classifi2[,29:30],simulate.p.value=TRUE)
+chisq.test(classifi2[,29:30])
 
+#syndrom 6+7 vs 4+5
+a1 <- c(4,67)
+a2 <- c(29,15)
+a <- rbind(a1,a2)
+chisq.test(a)
 
+#Flat
+b1 <- c(46,65)
+b2 <- c(4,29)
+b<- rbind(b1,b2)
+chisq.test(b)
+
+#Down-slop
+c1 <- c(40,38)
+c2 <- c(3,24)
+c<- rbind(c1,c2)
+chisq.test(c)
 
 #####classification 조합용 bar graph#####
 classifi3 <- read.csv("C:\\Users\\SNUH\\Desktop\\WGS_project\\2.csv",header = FALSE,fileEncoding = "euc-kr")
@@ -928,12 +990,3 @@ rbind(table(step$step2),round(prop.table(table(step$step2))*100,2))
 rbind(table(step$step3),round(prop.table(table(step$step3))*100,2))
 rbind(table(step$step4),round(prop.table(table(step$step4))*100,2))
 ##########
-install.packages("epitools")
-library(epitools)
-
-data <- matrix(c(2,7,167,133),nrow=2,ncol=2,byrow=TRUE)
-oddsratio(data)
-
-
-
-
